@@ -174,20 +174,17 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kategori</FormLabel>
-                    <Select onValueChange={(val) => field.onChange(val)} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih kategori" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id.toString()}>
-                            {cat.nama}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select 
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      {...field}
+                    >
+                      <option value="">Pilih kategori</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id.toString()}>
+                          {cat.nama}
+                        </option>
+                      ))}
+                    </select>
                     <FormMessage />
                   </FormItem>
                 )}

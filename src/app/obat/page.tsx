@@ -125,32 +125,47 @@ export default function ObatPage() {
       <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
 
       {/* Filters & Search */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border shadow-sm">
-        <div className="relative md:col-span-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input 
-            placeholder="Cari nama obat atau kode PLU..." 
-            className="pl-10 h-11 bg-slate-50 border-none focus-visible:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border shadow-sm">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input 
+              placeholder="Cari nama obat atau kode PLU..." 
+              className="pl-10 h-11 bg-slate-50 border-none focus-visible:ring-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'all')}>
+              <SelectTrigger className="h-11 bg-slate-50 border-none">
+                <Filter className="w-4 h-4 mr-2 text-gray-400" />
+                <SelectValue placeholder="Semua Kategori" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Kategori</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    {cat.nama}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'all')}>
-            <SelectTrigger className="h-11 bg-slate-50 border-none">
-              <Filter className="w-4 h-4 mr-2 text-gray-400" />
-              <SelectValue placeholder="Semua Kategori" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Kategori</SelectItem>
-              {categories.map(cat => (
-                <SelectItem key={cat.id} value={cat.id.toString()}>
-                  {cat.nama}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+
+        {canCRUD && (
+          <Button 
+            onClick={() => {
+              setEditingObat(null)
+              setIsDialogOpen(true)
+            }}
+            className="h-14 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 flex gap-2 w-full md:w-auto mt-4 md:mt-0"
+          >
+            <Plus className="w-6 h-6" />
+            Tambah Obat
+          </Button>
+        )}
       </div>
 
       {/* Main Table */}
