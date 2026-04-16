@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { 
   Package, 
@@ -24,10 +25,14 @@ import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
+const VALID_ROLES = ['pemilik', 'apoteker', 'kasir_senior', 'kasir_magang']
+
 export default function DashboardPage() {
   const supabase = createClient()
+  const router = useRouter()
   const isOnline = useOnlineStatus()
   const [loading, setLoading] = useState(true)
+  const [authChecked, setAuthChecked] = useState(false)
   const [userRole, setUserRole] = useState('')
   const [stats, setStats] = useState({ totalSales: 0, txCount: 0, estimatedProfit: 0 })
   const [chartData, setChartData] = useState<{ date: string; sales: number }[]>([])
@@ -109,14 +114,29 @@ export default function DashboardPage() {
     }
   }
 
+  // ── CLIENT-SIDE AUTH GUARD ───────────────────────────────────────────────
+  // Lapis pertahanan kedua: jika middleware gagal, halaman ini tetap memeriksa
+  // apakah user memiliki role yang valid sebelum menampilkan konten.
   useEffect(() => {
-    fetchData()
-    
-    // Initial Master Data Sync
-    if (isOnline) {
-      SyncManager.syncMasterData()
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser()
+      const role = user?.app_metadata?.role as string | undefined
+      if (!user || !role || !VALID_ROLES.includes(role)) {
+        await supabase.auth.signOut()
+        router.replace('/login')
+        return
+      }
+      setAuthChecked(true)
+      fetchData()
+      if (isOnline) SyncManager.syncMasterData()
     }
+    checkAuth()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
+  useEffect(() => {
+
+    if (!authChecked) return
     // Real-time Stock Subscription
     const channel = supabase
       .channel('schema-db-changes')
@@ -141,13 +161,13 @@ export default function DashboardPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [authChecked])
 
-  if (loading) {
+  if (!authChecked || loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50">
         <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
-        <p className="text-gray-500 font-medium animate-pulse">Menyiapkan Dashboard...</p>
+        <p className="text-gray-500 font-medium animate-pulse">Memeriksa sesi...</p>
       </div>
     )
   }
