@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
           const { error: createError } = await supabaseAdmin.auth.admin.createUser({
             id: user.id,
             email: email,
-            password: user.pin,
+            password: `ulebi_${user.pin}`,
             email_confirm: true,
             user_metadata: { nama_lengkap: user.nama_lengkap }
           })
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
                const { error: retryCreateError } = await supabaseAdmin.auth.admin.createUser({
                   id: user.id,
                   email: email,
-                  password: user.pin,
+                  password: `ulebi_${user.pin}`,
                   email_confirm: true,
                   user_metadata: { nama_lengkap: user.nama_lengkap }
                })
@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     const { error: adminAuthError } = await supabaseAdmin.auth.admin.createUser({
       id: defaultAdminId,
       email: defaultEmail,
-      password: defaultPin,
+      password: `ulebi_${defaultPin}`,
       email_confirm: true,
       user_metadata: { nama_lengkap: 'Pemilik Utama' }
     })

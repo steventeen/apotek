@@ -34,7 +34,7 @@ export function LoginForm() {
       // Format email: user_<uuid>@ulebi.internal
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email: `user_${userProfile.id}@ulebi.internal`,
-        password: currentPin,
+        password: `ulebi_${currentPin}`,
       })
 
       if (loginError) {
@@ -46,7 +46,7 @@ export function LoginForm() {
       // 3. Redirect berdasarkan role
       const role = userProfile.role
       if (role === 'pemilik' || role === 'apoteker') {
-        router.push('/dashboard')
+        router.push('/')
       } else {
         router.push('/kasir')
       }
