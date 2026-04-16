@@ -18,9 +18,11 @@ export function LoginForm() {
     setLoading(true)
     try {
       // 1. Validasi PIN menggunakan RPC (Secure bypass RLS)
-      const { data: userProfile, error: profileError } = await supabase
+      const { data, error: profileError } = await supabase
         .rpc('check_user_pin', { p_pin: currentPin })
         .maybeSingle()
+      
+      const userProfile = data as { id: string; role: string } | null
 
       if (profileError || !userProfile) {
         toast.error('PIN yang Anda masukkan salah')
