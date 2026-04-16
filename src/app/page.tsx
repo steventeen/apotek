@@ -16,9 +16,8 @@ import { Button } from '@/components/ui/button'
 import { SummaryGrid } from '@/components/dashboard/SummaryGrid'
 import { SalesChart } from '@/components/dashboard/SalesChart'
 import { LowStockAlert } from '@/components/dashboard/LowStockAlert'
-import { useOnlineStatus } from '@/hooks/useOnlineStatus'
-import { SyncManager } from '@/lib/sync-manager'
 import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
+import { AppHeader } from '@/components/shared/AppHeader'
 import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -152,34 +151,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-5">
-          <div className="bg-blue-600 p-4 rounded-3xl shadow-xl shadow-blue-100">
-            <LayoutDashboard className="text-white w-7 h-7" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-800 tracking-tight">Dashboard Utama</h1>
-            <p className="text-gray-500 text-sm">Ringkasan performa Apotek Ulebi hari ini.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ConnectivityIndicator />
-          <Button variant="outline" size="icon" className="rounded-xl h-12 w-12" onClick={fetchData}>
-            <RefreshCcw className="w-5 h-5 text-gray-600" />
-          </Button>
-          <Link href="/kasir">
-            <Button className="bg-blue-600 hover:bg-blue-700 h-12 px-6 rounded-2xl font-bold shadow-lg shadow-blue-100 flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
-              Transaksi Baru
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50">
+      <AppHeader title="Dashboard Utama" />
+      
+      <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
         {/* Summary Widgets */}
         <SummaryGrid stats={stats} />
 

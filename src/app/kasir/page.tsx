@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { SyncManager } from '@/lib/sync-manager'
 import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
+import { AppHeader } from '@/components/shared/AppHeader'
 
 export default function KasirClient() {
   const supabase = createClient()
@@ -139,17 +140,7 @@ export default function KasirClient() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <div className="bg-blue-600 p-2 rounded-lg">
-            <ShoppingCart className="text-white w-6 h-6" />
-          </div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">Kasir Ulebi</h1>
-        </div>
-
-        <ConnectivityIndicator />
-      </header>
+      <AppHeader title="Kasir Ulebi" />
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { LayoutDashboard, RefreshCcw, Loader2, Filter, Search, Plus, Package } from 'lucide-react'
-import { SyncManager } from '@/lib/sync-manager'
 import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
+import { AppHeader } from '@/components/shared/AppHeader'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -118,37 +118,10 @@ export default function ObatPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-100">
-            <Package className="text-white w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Manajemen Obat</h1>
-            <p className="text-gray-500 text-sm">Kelola stok, harga, dan kategori obat Anda.</p>
-          </div>
-        </div>
-
-        <div className="flex gap-2 items-center">
-          <ConnectivityIndicator />
-          <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
-            <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-          {canCRUD && (
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 h-11 px-6 rounded-xl font-bold shadow-lg shadow-blue-100 flex items-center gap-2"
-              onClick={() => {
-                setEditingObat(null)
-                setIsDialogOpen(true)
-              }}
-            >
-              <Plus className="w-5 h-5" /> Tambah Obat
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <AppHeader title="Manajemen Obat" />
+      
+      <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
 
       {/* Filters & Search */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border shadow-sm">
@@ -215,6 +188,7 @@ export default function ObatPage() {
         onOpenChange={setIsLabelOpen}
         obat={printingObat}
       />
+      </main>
     </div>
   )
 }

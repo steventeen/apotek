@@ -18,6 +18,7 @@ import {
 import { HarianTab } from '@/components/laporan/HarianTab'
 import { BulananTab } from '@/components/laporan/BulananTab'
 import { OpnameTab } from '@/components/laporan/OpnameTab'
+import { AppHeader } from '@/components/shared/AppHeader'
 import { useRouter } from 'next/navigation'
 
 export default function LaporanPage() {
@@ -70,45 +71,35 @@ export default function LaporanPage() {
       </div>
     )
   }
-
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-emerald-600 p-3 rounded-2xl shadow-lg shadow-emerald-100">
-            <BarChart3 className="text-white w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-800 tracking-tight">Pusat Laporan & Audit</h1>
-            <p className="text-gray-500 text-sm italic">Analisis performa toko dan audit stok fisik Anda.</p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <AppHeader title="Pusat Laporan & Audit" />
+      
+      <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+        <Tabs defaultValue="harian" className="space-y-6">
+          <TabsList className="bg-slate-100 p-1.5 h-14 rounded-2xl w-full md:w-auto grid grid-cols-3 md:inline-flex border">
+            <TabsTrigger value="harian" className="rounded-xl px-6 font-bold flex items-center gap-2 h-11 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+              <FileText className="w-4 h-4" /> Harian
+            </TabsTrigger>
+            <TabsTrigger value="bulanan" className="rounded-xl px-6 font-bold flex items-center gap-2 h-11 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+              <BarChart3 className="w-4 h-4" /> Bulanan
+            </TabsTrigger>
+            <TabsTrigger value="opname" className="rounded-xl px-6 font-bold flex items-center gap-2 h-11 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
+              <ClipboardCheck className="w-4 h-4" /> Stok Opname
+            </TabsTrigger>
+          </TabsList>
 
-      <Tabs defaultValue="harian" className="space-y-6">
-        <TabsList className="bg-slate-100 p-1.5 h-14 rounded-2xl w-full md:w-auto grid grid-cols-3 md:inline-flex border">
-          <TabsTrigger value="harian" className="rounded-xl px-6 font-bold flex items-center gap-2 h-11 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
-            <FileText className="w-4 h-4" /> Harian
-          </TabsTrigger>
-          <TabsTrigger value="bulanan" className="rounded-xl px-6 font-bold flex items-center gap-2 h-11 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
-            <BarChart3 className="w-4 h-4" /> Bulanan
-          </TabsTrigger>
-          <TabsTrigger value="opname" className="rounded-xl px-6 font-bold flex items-center gap-2 h-11 data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm">
-            <ClipboardCheck className="w-4 h-4" /> Stok Opname
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="harian" className="mt-6">
-          <HarianTab />
-        </TabsContent>
-        <TabsContent value="bulanan" className="mt-6">
-          <BulananTab />
-        </TabsContent>
-        <TabsContent value="opname" className="mt-6">
-          <OpnameTab />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="harian" className="mt-6">
+            <HarianTab />
+          </TabsContent>
+          <TabsContent value="bulanan" className="mt-6">
+            <BulananTab />
+          </TabsContent>
+          <TabsContent value="opname" className="mt-6">
+            <OpnameTab />
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   )
 }
