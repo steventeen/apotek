@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { ObatTable } from '@/components/obat/ObatTable'
 import { ObatDialog } from '@/components/obat/ObatDialog'
+import { KategoriDialog } from '@/components/obat/KategoriDialog'
 import { LabelCetak } from '@/components/obat/LabelCetak'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -36,6 +37,7 @@ export default function ObatPage() {
   
   // Modals
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isKategoriOpen, setIsKategoriOpen] = useState(false)
   const [editingObat, setEditingObat] = useState<any>(null)
   const [printingObat, setPrintingObat] = useState<any>(null)
   const [isLabelOpen, setIsLabelOpen] = useState(false)
@@ -155,16 +157,26 @@ export default function ObatPage() {
         </div>
 
         {canCRUD && (
-          <Button 
-            onClick={() => {
-              setEditingObat(null)
-              setIsDialogOpen(true)
-            }}
-            className="h-14 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 flex gap-2 w-full md:w-auto mt-4 md:mt-0"
-          >
-            <Plus className="w-6 h-6" />
-            Tambah Obat
-          </Button>
+          <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
+            <Button 
+                variant="outline"
+                onClick={() => setIsKategoriOpen(true)}
+                className="h-14 px-6 rounded-2xl border-slate-200 text-slate-600 font-bold hover:bg-slate-100 flex gap-2 flex-1 md:flex-none"
+            >
+                <Filter className="w-5 h-5" />
+                Kelola Kategori
+            </Button>
+            <Button 
+                onClick={() => {
+                setEditingObat(null)
+                setIsDialogOpen(true)
+                }}
+                className="h-14 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 flex gap-2 flex-1 md:flex-none"
+            >
+                <Plus className="w-6 h-6" />
+                Tambah Obat
+            </Button>
+          </div>
         )}
       </div>
 
@@ -197,6 +209,12 @@ export default function ObatPage() {
         initialData={editingObat}
         onSubmit={handleCreateOrUpdate}
         categories={categories}
+      />
+
+      <KategoriDialog 
+        open={isKategoriOpen}
+        onOpenChange={setIsKategoriOpen}
+        onRefresh={fetchData}
       />
 
       <LabelCetak 
