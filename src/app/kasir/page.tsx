@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/useCart'
 import { db, LocalObat } from '@/lib/offline-db'
-import { BarcodeScanner } from '@/components/kasir/BarcodeScanner'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { CartItem } from '@/components/kasir/CartItem'
 import { CheckoutModal } from '@/components/kasir/CheckoutModal'
 import { toast } from 'sonner'
@@ -244,12 +244,11 @@ export default function KasirClient() {
       </main>
 
       {/* Modals */}
-      {showScanner && (
-        <BarcodeScanner 
-          onScan={handleScan} 
-          onClose={() => setShowScanner(false)} 
-        />
-      )}
+      <BarcodeScanner 
+        open={showScanner} 
+        onOpenChange={setShowScanner} 
+        onResult={handleScan} 
+      />
       
       {showCheckout && (
         <CheckoutModal 

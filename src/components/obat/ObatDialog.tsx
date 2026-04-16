@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Camera, Loader2 } from 'lucide-react'
+import { Search, Camera, Loader2, Scan } from 'lucide-react'
+import { BarcodeScanner } from '@/components/shared/BarcodeScanner'
 import { toast } from 'sonner'
 
 const obatSchema = z.object({
@@ -50,6 +50,7 @@ interface ObatDialogProps {
 export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categories }: ObatDialogProps) {
   const [isSearchingKFA, setIsSearchingKFA] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isScannerOpen, setIsScannerOpen] = useState(false)
 
   const form = useForm<any>({
     resolver: zodResolver(obatSchema),
@@ -129,6 +130,16 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                         </FormControl>
                         <Button 
                           type="button" 
+                          variant="outline" 
+                          className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+                          onClick={() => setIsScannerOpen(true)}
+                          title="Gunakan Kamera"
+                        >
+                          <Camera className="w-4 h-4 mr-2" />
+                          Scan
+                        </Button>
+                        <Button 
+                          type="button" 
                           variant="secondary" 
                           onClick={async () => {
                             const plu = form.getValues('kode_plu')
@@ -142,6 +153,7 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                             setIsSearchingKFA(false)
                           }}
                           disabled={isSearchingKFA}
+                          title="Cari Otomatis"
                         >
                           <Search className="w-4 h-4" />
                         </Button>
@@ -269,6 +281,15 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
           </form>
         </Form>
       </DialogContent>
+      
+      <BarcodeScanner 
+        open={isScannerOpen} 
+        onOpenChange={setIsScannerOpen} 
+        onResult={(result) => {
+          form.setValue('kode_plu', result)
+          toast.success('Barcode berhasil dipindai: ' + result)
+        }} 
+      />
     </Dialog>
   )
 }
