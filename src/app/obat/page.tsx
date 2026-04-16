@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { LayoutDashboard, RefreshCcw, Loader2, Filter, Search, Plus, Package } from 'lucide-react'
+import { SyncManager } from '@/lib/sync-manager'
 import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
 import { AppHeader } from '@/components/shared/AppHeader'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
