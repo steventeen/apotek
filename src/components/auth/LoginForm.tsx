@@ -17,11 +17,9 @@ export function LoginForm() {
   const handleLogin = async (currentPin: string) => {
     setLoading(true)
     try {
-      // 1. Validasi PIN ke tabel public.users
+      // 1. Validasi PIN menggunakan RPC (Secure bypass RLS)
       const { data: userProfile, error: profileError } = await supabase
-        .from('users')
-        .select('id, role')
-        .eq('pin', currentPin)
+        .rpc('check_user_pin', { p_pin: currentPin })
         .maybeSingle()
 
       if (profileError || !userProfile) {
