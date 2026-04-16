@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Camera, ShoppingCart, RefreshCcw } from 'lucide-react'
+import { Search, Camera, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/useCart'
@@ -23,19 +23,28 @@ export default function KasirClient() {
   const [showScanner, setShowScanner] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [tokoSettings, setTokoSettings] = useState<any>(null)
+  const [userEmail, setUserEmail] = useState('')
   
   const { items, addToCart, removeFromCart, updateQuantity, clearCart, total } = useCart()
 
   // 1. Fetch Toko Settings & Initial Sync
   useEffect(() => {
     async function init() {
-      // Fetch Toko Settings
-      const { data } = await supabase.from('toko_settings').select('*').limit(1).maybeSingle()
-      if (data) setTokoSettings(data)
-      
-      // Auto-sync master data on load if online
-      if (isOnline) {
-        await SyncManager.syncMasterData()
+      try {
+        // Fetch User Info
+        const { data: userData } = await supabase.auth.getUser()
+        if (userData?.user?.email) setUserEmail(userData.user.email)
+
+        // Fetch Toko Settings
+        const { data } = await supabase.from('toko_settings').select('*').limit(1).maybeSingle()
+        if (data) setTokoSettings(data)
+        
+        // Auto-sync master data on load if online
+        if (isOnline) {
+          await SyncManager.syncMasterData()
+        }
+      } catch (err) {
+        console.error('Init error:', err)
       }
     }
     init()
@@ -256,6 +265,7 @@ export default function KasirClient() {
           items={items} 
           total={total} 
           toko={tokoSettings || { nama: 'Apotek Ulebi', alamat: '-', no_hp: '-' }}
+          userEmail={userEmail || 'Kasir'}
           onConfirm={handleCheckout} 
           onClose={() => setShowCheckout(false)} 
         />

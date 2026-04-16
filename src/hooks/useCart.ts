@@ -1,16 +1,16 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
-import { LocalProduct } from '@/lib/db'
+import { LocalObat } from '@/lib/offline-db'
 
-export interface CartItem extends LocalProduct {
+export interface CartItem extends LocalObat {
   quantity: number
 }
 
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([])
 
-  const addToCart = useCallback((product: LocalProduct) => {
+  const addToCart = useCallback((product: LocalObat) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id)
       if (existing) {

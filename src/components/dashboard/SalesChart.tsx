@@ -55,7 +55,7 @@ export function SalesChart({ data }: SalesChartProps) {
             />
             <Tooltip 
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-              formatter={(value: number) => [`Rp ${value.toLocaleString('id-ID')}`, 'Penjualan']}
+              formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, 'Penjualan']}
             />
             <Area 
               type="monotone" 

@@ -162,7 +162,7 @@ export default function ObatPage() {
           />
         </div>
         <div className="flex gap-2">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'all')}>
             <SelectTrigger className="h-11 bg-slate-50 border-none">
               <Filter className="w-4 h-4 mr-2 text-gray-400" />
               <SelectValue placeholder="Semua Kategori" />

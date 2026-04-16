@@ -29,12 +29,12 @@ const obatSchema = z.object({
   kode_plu: z.string().min(1, 'Kode PLU wajib diisi'),
   nama: z.string().min(3, 'Nama obat minimal 3 karakter'),
   kategori_id: z.string().min(1, 'Pilih kategori'),
-  harga_beli: z.coerce.number().min(0),
-  harga_jual: z.coerce.number().min(0),
-  stok: z.coerce.number().min(0),
-  min_stok: z.coerce.number().min(0),
+  harga_beli: z.coerce.number().min(0).default(0),
+  harga_jual: z.coerce.number().min(0).default(0),
+  stok: z.coerce.number().min(0).default(0),
+  min_stok: z.coerce.number().min(0).default(5),
   satuan: z.string().min(1, 'Satuan wajib diisi'),
-  lokasi_rak: z.string().optional(),
+  lokasi_rak: z.string().optional().nullable().default(''),
 })
 
 type ObatFormValues = z.infer<typeof obatSchema>
@@ -43,7 +43,7 @@ interface ObatDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   initialData?: any
-  onSubmit: (data: any) => Promise<void>
+  onSubmit: (data: ObatFormValues) => Promise<void>
   categories: { id: string; nama: string }[]
 }
 
@@ -51,7 +51,7 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
   const [isSearchingKFA, setIsSearchingKFA] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const form = useForm<ObatFormValues>({
+  const form = useForm<any>({
     resolver: zodResolver(obatSchema),
     defaultValues: {
       kode_plu: '',
@@ -67,50 +67,36 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
   })
 
   useEffect(() => {
-    if (initialData) {
-      form.reset({
-        ...initialData,
-        kategori_id: initialData.kategori_id?.toString() || ''
-      })
-    } else {
-      form.reset({
-        kode_plu: '',
-        nama: '',
-        kategori_id: '',
-        harga_beli: 0,
-        harga_jual: 0,
-        stok: 0,
-        min_stok: 5,
-        satuan: 'Tablet',
-        lokasi_rak: '',
-      })
+    if (open) {
+      if (initialData) {
+        form.reset({
+          kode_plu: initialData.kode_plu || '',
+          nama: initialData.nama || '',
+          kategori_id: initialData.kategori_id?.toString() || '',
+          harga_beli: initialData.harga_beli || 0,
+          harga_jual: initialData.harga_jual || 0,
+          stok: initialData.stok || 0,
+          min_stok: initialData.min_stok || 5,
+          satuan: initialData.satuan || 'Tablet',
+          lokasi_rak: initialData.lokasi_rak || '',
+        })
+      } else {
+        form.reset({
+          kode_plu: '',
+          nama: '',
+          kategori_id: '',
+          harga_beli: 0,
+          harga_jual: 0,
+          stok: 0,
+          min_stok: 5,
+          satuan: 'Tablet',
+          lokasi_rak: '',
+        })
+      }
     }
   }, [initialData, form, open])
 
-  // Mock KFA Search
-  const handleKFALookup = async () => {
-    const plu = form.getValues('kode_plu')
-    if (!plu) {
-      toast.error('Masukkan kode PLU/Barcode terlebih dahulu')
-      return
-    }
-
-    setIsSearchingKFA(true)
-    // Simulasi API call SATUSEHAT KFA
-    await new Promise(r => setTimeout(r, 1500))
-    
-    // Logic dummy: jika barcode tertentu, isi data otomatis
-    if (plu === '899' || plu === '123') {
-      form.setValue('nama', 'Paracetamol 500mg (Auto-filled)')
-      form.setValue('satuan', 'Tablet')
-      toast.success('Data ditemukan di database KFA!')
-    } else {
-      toast.info('Data tidak ditemukan di KFA, silakan isi manual')
-    }
-    setIsSearchingKFA(false)
-  }
-
-  const handleFormSubmit = async (values: ObatFormValues) => {
+  const handleFormSubmit = async (values: any) => {
     setIsSubmitting(true)
     try {
       await onSubmit(values)
@@ -130,7 +116,6 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Scan / PLU */}
               <div className="md:col-span-2">
                 <FormField
                   control={form.control}
@@ -145,11 +130,20 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                         <Button 
                           type="button" 
                           variant="secondary" 
-                          onClick={handleKFALookup}
+                          onClick={async () => {
+                            const plu = form.getValues('kode_plu')
+                            if (!plu) return
+                            setIsSearchingKFA(true)
+                            await new Promise(r => setTimeout(r, 1000))
+                            if (plu === '899') {
+                              form.setValue('nama', 'Paracetamol 500mg')
+                              form.setValue('satuan', 'Tablet')
+                            }
+                            setIsSearchingKFA(false)
+                          }}
                           disabled={isSearchingKFA}
                         >
-                          {isSearchingKFA ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                          <span className="ml-2 hidden sm:inline">Cari KFA</span>
+                          <Search className="w-4 h-4" />
                         </Button>
                       </div>
                       <FormMessage />
@@ -158,7 +152,6 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 />
               </div>
 
-              {/* Nama Obat */}
               <div className="md:col-span-2">
                 <FormField
                   control={form.control}
@@ -175,14 +168,13 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 />
               </div>
 
-              {/* Kategori */}
               <FormField
                 control={form.control}
                 name="kategori_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kategori</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                    <Select onValueChange={(val) => field.onChange(val)} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih kategori" />
@@ -201,28 +193,26 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 )}
               />
 
-              {/* Satuan */}
               <FormField
                 control={form.control}
                 name="satuan"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Satuan (Eceran)</FormLabel>
+                    <FormLabel>Satuan</FormLabel>
                     <FormControl>
-                      <Input placeholder="Tablet / Botol / Pcs" {...field} />
+                      <Input placeholder="Tablet / Botol" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Harga Beli */}
               <FormField
                 control={form.control}
                 name="harga_beli"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Harga Beli (Rp)</FormLabel>
+                    <FormLabel>Harga Beli</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -231,13 +221,12 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 )}
               />
 
-              {/* Harga Jual */}
               <FormField
                 control={form.control}
                 name="harga_jual"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Harga Jual (Rp)</FormLabel>
+                    <FormLabel>Harga Jual</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -246,13 +235,12 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 )}
               />
 
-              {/* Stok & Stok Minimal */}
               <FormField
                 control={form.control}
                 name="stok"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stok Saat Ini</FormLabel>
+                    <FormLabel>Stok</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -266,7 +254,7 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                 name="min_stok"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stok Minimal (Alert)</FormLabel>
+                    <FormLabel>Min Stok</FormLabel>
                     <FormControl>
                       <Input type="number" {...field} />
                     </FormControl>
@@ -274,30 +262,11 @@ export function ObatDialog({ open, onOpenChange, initialData, onSubmit, categori
                   </FormItem>
                 )}
               />
-
-              {/* Rak */}
-              <div className="md:col-span-2">
-                <FormField
-                  control={form.control}
-                  name="lokasi_rak"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lokasi Rak (Opsional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Contoh: Rak Depan A-1" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Batal</Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {initialData ? 'Update Obat' : 'Simpan Obat'}
+              <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={isSubmitting}>
+                {isSubmitting ? 'Menyimpan...' : 'Simpan Obat'}
               </Button>
             </DialogFooter>
           </form>

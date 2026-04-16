@@ -1,7 +1,11 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { StrukRenderer } from '@/components/Struk'
+import { CheckCircle2, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { CartItem } from '@/hooks/useCart'
 
 interface CheckoutModalProps {
   items: CartItem[]
@@ -49,7 +53,12 @@ export function CheckoutModal({ items, total, toko, userEmail, onConfirm, onClos
                 kasir: userEmail.split('@')[0],
                 tanggal: new Date().toLocaleString('id-ID')
               }}
-              items={items}
+              items={items.map(item => ({
+                nama: item.nama,
+                qty: item.quantity,
+                harga: item.harga_jual,
+                subtotal: item.harga_jual * item.quantity
+              }))}
               total={total}
               bayar={numBayar}
               kembali={kembali}
@@ -63,7 +72,6 @@ export function CheckoutModal({ items, total, toko, userEmail, onConfirm, onClos
       </div>
     )
   }
-
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -98,6 +106,7 @@ export function CheckoutModal({ items, total, toko, userEmail, onConfirm, onClos
               {[total, 50000, 100000].map(val => (
                 <button 
                   key={val}
+                  type="button"
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-bold transition"
                   onClick={() => setBayar(val.toString())}
                 >

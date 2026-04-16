@@ -200,7 +200,7 @@ export function OpnameTab() {
                         size="sm" 
                         className="bg-blue-600 hover:bg-blue-700 h-9 gap-2"
                         onClick={() => submitOpname(item.id)}
-                        disabled={isSubmitting || fisikus === undefined}
+                        disabled={isSubmitting || fisik === undefined}
                       >
                         <Save className="w-4 h-4" />
                         Simpan

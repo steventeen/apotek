@@ -75,7 +75,7 @@ export function SettingsForm() {
               )} />
               <FormField control={form.control} name="jenis_usaha" render={({ field }) => (
                 <FormItem><FormLabel>Jenis</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="apotek">Apotek</SelectItem><SelectItem value="toko_obat">Toko Obat</SelectItem><SelectItem value="kios_obat">Kios Obat</SelectItem></SelectContent></Select>
+                <Select onValueChange={(val) => field.onChange(val)} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="apotek">Apotek</SelectItem><SelectItem value="toko_obat">Toko Obat</SelectItem><SelectItem value="kios_obat">Kios Obat</SelectItem></SelectContent></Select>
                 </FormItem>
               )} />
             </div>
