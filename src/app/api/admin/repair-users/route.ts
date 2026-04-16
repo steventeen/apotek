@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         // 3. Jika user tidak ditemukan di auth, buat baru
         if (updateError.message.toLowerCase().includes('not found')) {
           const { error: createError } = await supabaseAdmin.auth.admin.createUser({
-            id: user.id, // Gunakan ID yang sama agar FK profile tetap valid
+            id: user.id,
             email: email,
             password: user.pin,
             email_confirm: true,
@@ -50,7 +50,34 @@ export async function GET(request: NextRequest) {
           })
 
           if (createError) {
-            results.push({ id: user.id, status: 'error', message: 'Create: ' + createError.message })
+            // 4. Jika tetap gagal (Database error), ada kemungkinan profil stuck tanpa akun auth
+            // Kita coba hapus dulu profilnya (karena ini data corrupt) lalu buat ulang
+            if (createError.message.toLowerCase().includes('database error')) {
+               await supabaseAdmin.from('users').delete().eq('id', user.id)
+               const { error: retryCreateError } = await supabaseAdmin.auth.admin.createUser({
+                  id: user.id,
+                  email: email,
+                  password: user.pin,
+                  email_confirm: true,
+                  user_metadata: { nama_lengkap: user.nama_lengkap }
+               })
+
+               if (retryCreateError) {
+                  results.push({ id: user.id, status: 'error', message: 'Retry Create: ' + retryCreateError.message })
+               } else {
+                  // Profil biasanya akan dibuat ulang otomatis via trigger jika ada, 
+                  // jika tidak, kita buat manual di sini
+                  await supabaseAdmin.from('users').insert({
+                     id: user.id,
+                     nama_lengkap: user.nama_lengkap,
+                     role: 'pemilik', // Default ke pemilik jika tidak tahu
+                     pin: user.pin
+                  })
+                  results.push({ id: user.id, status: 'recreated' })
+               }
+            } else {
+               results.push({ id: user.id, status: 'error', message: 'Create: ' + createError.message })
+            }
           } else {
             results.push({ id: user.id, status: 'created' })
           }
@@ -63,7 +90,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Sinkronisasi selesai',
+      message: 'Sinkronisasi selesai. Silakan coba login lagi.',
       total: users?.length || 0,
       details: results
     })
