@@ -6,8 +6,8 @@ import { cookies } from 'next/headers'
  * Server Actions, atau Route Handlers.
  * Client ini menangani cookies secara otomatis untuk autentikasi.
  */
-export async function createClient() {
-  const cookieStore = await cookies()
+export function createClient() {
+  const cookieStore = cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
