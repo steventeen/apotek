@@ -17,19 +17,35 @@ export function AppHeader({ title }: AppHeaderProps) {
   const supabase = createClient()
   const router = useRouter()
   const pathname = usePathname()
-  const [userEmail, setUserEmail] = useState('')
-  const [userRole, setUserRole] = useState('')
+  const [userData, setUserData] = useState<{ name: string; role: string }>({ name: 'User', role: 'Kasir' })
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   useEffect(() => {
-    async function getUser() {
+    async function getUserData() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        setUserEmail(user.email || 'User')
-        setUserRole(user.app_metadata?.role || 'Kasir')
+        // Fetch from profile table for real name
+        const { data: profile } = await supabase
+          .from('users')
+          .select('nama_lengkap, role')
+          .eq('id', user.id)
+          .single()
+        
+        if (profile) {
+          setUserData({ 
+            name: profile.nama_lengkap, 
+            role: profile.role 
+          })
+        } else {
+          // Fallback to metadata or email
+          setUserData({ 
+            name: user.user_metadata?.nama_lengkap || user.email?.split('@')[0] || 'User', 
+            role: user.app_metadata?.role || 'Kasir' 
+          })
+        }
       }
     }
-    getUser()
+    getUserData()
   }, [supabase])
 
   const handleLogout = async () => {
@@ -49,9 +65,10 @@ export function AppHeader({ title }: AppHeaderProps) {
     { label: 'Obat', href: '/obat', icon: Package, roles: ['pemilik', 'apoteker'] },
     { label: 'Laporan', href: '/laporan', icon: FileText, roles: ['pemilik', 'apoteker'] },
     { label: 'Pengaturan', href: '/settings', icon: Settings, roles: ['pemilik'] },
+    { label: 'Manajemen User', href: '/admin', icon: User, roles: ['pemilik'] },
   ]
 
-  const filteredNav = navItems.filter(item => !item.roles || item.roles.includes(userRole))
+  const filteredNav = navItems.filter(item => !item.roles || item.roles.includes(userData.role))
 
   return (
     <header className="bg-white border-b sticky top-0 z-50">
@@ -61,10 +78,29 @@ export function AppHeader({ title }: AppHeaderProps) {
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </Button>
           <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-1.5 rounded-lg hidden sm:block">
-              <ShoppingCart className="text-white w-5 h-5" />
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="bg-blue-600 p-1.5 rounded-lg group-hover:bg-blue-700 transition">
+                <ShoppingCart className="text-white w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="text-sm font-bold text-gray-800 leading-none group-hover:text-blue-600 transition">Apotek Ulebi</h1>
+                <p className="text-[10px] text-gray-400 font-medium">Sistem POS Premium</p>
+              </div>
+            </Link>
+            
+            <div className="h-6 w-px bg-gray-200 mx-2 hidden sm:block" />
+            
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-900 tracking-tight hidden sm:block">{title}</h2>
+              {pathname !== '/' && (
+                <Link href="/">
+                  <Button variant="ghost" size="sm" className="text-blue-600 font-bold gap-1 px-2 hover:bg-blue-50">
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="hidden md:inline">Panel Utama</span>
+                  </Button>
+                </Link>
+              )}
             </div>
-            <h1 className="text-lg font-bold text-gray-800 tracking-tight">{title}</h1>
           </div>
         </div>
 
@@ -73,8 +109,8 @@ export function AppHeader({ title }: AppHeaderProps) {
           
           <div className="hidden md:flex items-center gap-3 pl-4 border-l">
             <div className="text-right">
-              <p className="text-xs font-bold text-gray-800 leading-none">{userEmail.split('@')[0]}</p>
-              <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{userRole}</p>
+              <p className="text-xs font-bold text-gray-800 leading-none">{userData.name}</p>
+              <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{userData.role.replace('_', ' ')}</p>
             </div>
             <Button 
               variant="ghost" 
@@ -134,8 +170,8 @@ export function AppHeader({ title }: AppHeaderProps) {
               <User className="text-blue-600 w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="font-bold text-gray-800 truncate text-sm">{userEmail.split('@')[0]}</p>
-              <p className="text-[10px] text-gray-400 font-bold uppercase">{userRole}</p>
+              <p className="font-bold text-gray-800 truncate text-sm">{userData.name}</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">{userData.role.replace('_', ' ')}</p>
             </div>
           </div>
           <Button 
