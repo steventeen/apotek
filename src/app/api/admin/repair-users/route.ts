@@ -27,9 +27,8 @@ export async function GET(request: NextRequest) {
     for (const user of (users || [])) {
       const email = `user_${user.id}@ulebi.internal`
       
-      // 2. Update atau buat user di auth.users
-      // Kita gunakan updateUserById karena user pasti ada (FK constraint)
-      const { data, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      // 2. Coba update user di auth.users
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         user.id,
         { 
           email: email,
@@ -40,7 +39,24 @@ export async function GET(request: NextRequest) {
       )
 
       if (updateError) {
-        results.push({ id: user.id, status: 'error', message: updateError.message })
+        // 3. Jika user tidak ditemukan di auth, buat baru
+        if (updateError.message.toLowerCase().includes('not found')) {
+          const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+            id: user.id, // Gunakan ID yang sama agar FK profile tetap valid
+            email: email,
+            password: user.pin,
+            email_confirm: true,
+            user_metadata: { nama_lengkap: user.nama_lengkap }
+          })
+
+          if (createError) {
+            results.push({ id: user.id, status: 'error', message: 'Create: ' + createError.message })
+          } else {
+            results.push({ id: user.id, status: 'created' })
+          }
+        } else {
+          results.push({ id: user.id, status: 'error', message: 'Update: ' + updateError.message })
+        }
       } else {
         results.push({ id: user.id, status: 'success' })
       }
