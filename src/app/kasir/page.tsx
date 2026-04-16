@@ -18,7 +18,9 @@ export default function KasirClient() {
   const [searchResults, setSearchResults] = useState<LocalProduct[]>([])
   const [showScanner, setShowScanner] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
+  const [tokoSettings, setTokoSettings] = useState<any>(null)
   const [isOnline, setIsOnline] = useState(true)
+
   const [isSyncing, setIsSyncing] = useState(false)
   const { items, addToCart, removeFromCart, updateQuantity, clearCart, total } = useCart()
 
@@ -53,7 +55,15 @@ export default function KasirClient() {
       }
     }
     initProducts()
+
+    // 2b. Fetch Toko Settings
+    async function fetchToko() {
+      const { data } = await supabase.from('toko_settings').select('*').limit(1).maybeSingle()
+      if (data) setTokoSettings(data)
+    }
+    fetchToko()
   }, [supabase])
+
 
   // 3. Search Logic (Local First)
   useEffect(() => {
@@ -282,10 +292,13 @@ export default function KasirClient() {
         <CheckoutModal 
           items={items} 
           total={total} 
+          toko={tokoSettings || { nama: 'Apotek Ulebi', alamat: '-', no_hp: '-' }}
+          userEmail={user?.email || 'Kasir'}
           onConfirm={handleCheckout} 
           onClose={() => setShowCheckout(false)} 
         />
       )}
+
     </div>
   )
 }

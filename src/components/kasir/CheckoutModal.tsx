@@ -1,23 +1,21 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { CheckCircle2, Download, Printer, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { CartItem } from '@/hooks/useCart'
-import html2canvas from 'html2canvas'
-import { toast } from 'sonner'
+import { StrukRenderer } from '@/components/Struk'
 
 interface CheckoutModalProps {
   items: CartItem[]
   total: number
+  toko: { nama: string; alamat: string; no_hp: string }
+  userEmail: string
   onConfirm: (bayar: number, kembali: number) => Promise<void>
   onClose: () => void
 }
 
-export function CheckoutModal({ items, total, onConfirm, onClose }: CheckoutModalProps) {
+export function CheckoutModal({ items, total, toko, userEmail, onConfirm, onClose }: CheckoutModalProps) {
   const [bayar, setBayar] = useState<string>('')
   const [isSuccess, setIsSuccess] = useState(false)
-  const receiptRef = useRef<HTMLDivElement>(null)
+  const [invoiceNo, setInvoiceNo] = useState('')
 
   const numBayar = Number(bayar) || 0
   const kembali = numBayar - total
@@ -27,82 +25,45 @@ export function CheckoutModal({ items, total, onConfirm, onClose }: CheckoutModa
       toast.error('Jumlah bayar kurang')
       return
     }
+    const noInvoice = `INV-${new Date().getTime()}`
+    setInvoiceNo(noInvoice)
     await onConfirm(numBayar, kembali)
     setIsSuccess(true)
   }
 
-  const saveAsImage = async () => {
-    if (receiptRef.current) {
-      const canvas = await html2canvas(receiptRef.current)
-      const link = document.createElement('a')
-      link.download = `struk-${new Date().getTime()}.png`
-      link.href = canvas.toDataURL()
-      link.click()
-    }
-  }
-
   if (isSuccess) {
     return (
-      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
-        <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden flex flex-col items-center p-8 text-center animate-in zoom-in-95 duration-200">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-            <CheckCircle2 className="w-12 h-12 text-green-600" />
+      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden flex flex-col items-center p-6 text-center animate-in zoom-in-95 duration-200 my-auto">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Transaksi Berhasil!</h2>
-          <p className="text-gray-500 mb-8">Data telah disimpan {navigator.onLine ? 'ke cloud' : 'secara lokal (offline)'}.</p>
+          <h2 className="text-xl font-bold text-gray-800 mb-1">Transaksi Berhasil!</h2>
+          <p className="text-xs text-gray-400 mb-6">Data telah diamankan ke sistem.</p>
           
-          {/* Receipt Preview (Hidden from view, used for capture) */}
-          <div className="fixed left-[-9999px]">
-            <div ref={receiptRef} className="p-8 bg-white text-black w-[300px] font-mono text-sm leading-tight border">
-              <div className="text-center mb-4">
-                <h3 className="font-bold text-lg uppercase">APOTEK ULEBI</h3>
-                <p>Kesehatan Anda Prioritas Kami</p>
-                <p className="text-[10px] mt-1">{new Date().toLocaleString('id-ID')}</p>
-                <div className="border-b border-dashed my-2"></div>
-              </div>
-              <div className="space-y-1 mb-4">
-                {items.map(item => (
-                  <div key={item.id} className="flex justify-between">
-                    <span>{item.nama} x{item.quantity}</span>
-                    <span>{(Number(item.harga_jual) * item.quantity).toLocaleString('id-ID')}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="border-b border-dashed my-2"></div>
-              <div className="flex justify-between font-bold">
-                <span>TOTAL</span>
-                <span>Rp {total.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>BAYAR</span>
-                <span>Rp {numBayar.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="flex justify-between underline">
-                <span>KEMBALI</span>
-                <span>Rp {kembali.toLocaleString('id-ID')}</span>
-              </div>
-              <div className="text-center mt-6 text-[10px]">
-                <p>Terima kasih atas kunjungan Anda</p>
-                <p>Semoga lekas sembuh</p>
-              </div>
-            </div>
+          <div className="w-full bg-slate-50 rounded-2xl p-2 mb-6">
+            <StrukRenderer 
+              toko={toko}
+              transaksi={{
+                no_invoice: invoiceNo,
+                kasir: userEmail.split('@')[0],
+                tanggal: new Date().toLocaleString('id-ID')
+              }}
+              items={items}
+              total={total}
+              bayar={numBayar}
+              kembali={kembali}
+            />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 w-full mb-4">
-            <Button variant="outline" className="flex items-center gap-2" onClick={saveAsImage}>
-              <Download className="w-4 h-4" /> Gambar
-            </Button>
-            <Button variant="outline" className="flex items-center gap-2" onClick={() => toast.info('Fitur cetak Bluetooth sedang disiapkan')}>
-              <Printer className="w-4 h-4" /> Struk
-            </Button>
-          </div>
-          <Button className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg font-bold" onClick={onClose}>
-            Selesai
+          <Button className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg font-bold rounded-2xl" onClick={onClose}>
+            Tutup
           </Button>
         </div>
       </div>
     )
   }
+
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
