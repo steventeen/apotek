@@ -13,12 +13,19 @@ export default async function SettingsPage() {
 
 
   return (
-    <main className="min-h-screen bg-slate-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold">Pengaturan</h1>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <SettingsHeader />
+      <main className="flex-1 py-12 px-4 max-w-4xl mx-auto w-full space-y-6">
+        <h1 className="text-3xl font-bold">Pengaturan Toko</h1>
         <SettingsForm />
         <Toaster position="top-right" richColors />
-      </div>
-    </main>
+      </main>
+    </div>
   )
+}
+
+// Small client component wrapper for settings or just import AppHeader
+import { AppHeader } from '@/components/shared/AppHeader'
+function SettingsHeader() {
+  return <AppHeader title="Pengaturan Toko" />
 }
