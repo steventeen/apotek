@@ -11,7 +11,7 @@ export async function addUser(formData: { nama_lengkap: string; role: string; pi
     email: `temp_${Date.now()}@ulebi.internal`, // Email sementara, akan di-update setelah dapet ID
     password: `ulebi_${formData.pin}`,
     email_confirm: true,
-    user_metadata: { role: formData.role }
+    app_metadata: { role: formData.role }
   })
 
   if (authError) throw new Error('Gagal membuat akun auth: ' + authError.message)

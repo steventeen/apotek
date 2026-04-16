@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // 1. Ambil semua user dari tabel profil
     const { data: users, error: fetchError } = await supabaseAdmin
       .from('users')
-      .select('id, pin, nama_lengkap')
+      .select('id, pin, nama_lengkap, role')
 
     if (fetchError) throw fetchError
 
@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
           email: email,
           password: `ulebi_${user.pin}`,
           email_confirm: true,
-          user_metadata: { nama_lengkap: user.nama_lengkap }
+          user_metadata: { nama_lengkap: user.nama_lengkap },
+          app_metadata: { role: user.role }
         }
       )
 
@@ -46,7 +47,8 @@ export async function GET(request: NextRequest) {
             email: email,
             password: `ulebi_${user.pin}`,
             email_confirm: true,
-            user_metadata: { nama_lengkap: user.nama_lengkap }
+            user_metadata: { nama_lengkap: user.nama_lengkap },
+            app_metadata: { role: user.role }
           })
 
           if (createError) {
@@ -59,7 +61,8 @@ export async function GET(request: NextRequest) {
                   email: email,
                   password: `ulebi_${user.pin}`,
                   email_confirm: true,
-                  user_metadata: { nama_lengkap: user.nama_lengkap }
+                  user_metadata: { nama_lengkap: user.nama_lengkap },
+                  app_metadata: { role: user.role }
                })
 
                if (retryCreateError) {
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
                   await supabaseAdmin.from('users').insert({
                      id: user.id,
                      nama_lengkap: user.nama_lengkap,
-                     role: 'pemilik', // Default ke pemilik jika tidak tahu
+                     role: user.role || 'pemilik', // Default ke pemilik jika tidak tahu
                      pin: user.pin
                   })
                   results.push({ id: user.id, status: 'recreated' })
@@ -89,8 +92,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 5. Tambahan Darurat: Jika tidak ada user yang berhasil disinkronkan atau untuk memastikan ada akses,
-    // kita buat satu user Pemilik baru dengan PIN default 1234.
+    // 5. Tambahan Darurat: User Pemilik baru dengan PIN default 1234.
     const defaultAdminId = crypto.randomUUID()
     const defaultEmail = `admin_utama@ulebi.internal`
     const defaultPin = '1234'
@@ -100,7 +102,8 @@ export async function GET(request: NextRequest) {
       email: defaultEmail,
       password: `ulebi_${defaultPin}`,
       email_confirm: true,
-      user_metadata: { nama_lengkap: 'Pemilik Utama' }
+      user_metadata: { nama_lengkap: 'Pemilik Utama' },
+      app_metadata: { role: 'pemilik' }
     })
 
     if (!adminAuthError) {
