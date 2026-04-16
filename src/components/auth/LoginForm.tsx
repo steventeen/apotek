@@ -17,29 +17,47 @@ export function LoginForm() {
   const handleLogin = async (currentPin: string) => {
     setLoading(true)
     try {
-      const { data: userProfile, error: profileError } = await supabase.from('users').select('id, role').eq('pin', currentPin).maybeSingle()
+      // 1. Validasi PIN ke tabel public.users
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('pin', currentPin)
+        .maybeSingle()
+
       if (profileError || !userProfile) {
-        toast.error('PIN salah')
+        toast.error('PIN yang Anda masukkan salah')
         setPin('')
         return
       }
 
+      // 2. Login ke Supabase Auth menggunakan email internal & PIN sebagai kata sandi
+      // Format email: user_<uuid>@ulebi.internal
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email: `user_${userProfile.id}@ulebi.internal`,
         password: currentPin,
       })
 
       if (loginError) {
-        toast.error('Gagal: ' + loginError.message)
+        toast.error('Terjadi kendala autentikasi: ' + loginError.message)
         setPin('')
         return
       }
 
+      // 3. Redirect berdasarkan role
       const role = userProfile.role
-      router.push((role === 'pemilik' || role === 'apoteker') ? '/dashboard' : '/kasir')
+      if (role === 'pemilik' || role === 'apoteker') {
+        router.push('/dashboard')
+      } else {
+        router.push('/kasir')
+      }
       router.refresh()
-    } catch { toast.error('Error sistem') } finally { setLoading(false) }
+    } catch (error) {
+      toast.error('Kesalahan sistem internal')
+    } finally {
+      setLoading(false)
+    }
   }
+
 
   const handleNumber = (num: string) => {
     if (pin.length < 4) {
