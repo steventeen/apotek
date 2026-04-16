@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Apotek Ulebi - Sistem Kasir & Inventori Modern
 
-## Getting Started
+Apotek Ulebi adalah aplikasi Point of Sale (POS) dan manajemen inventori apotek yang dirancang untuk kecepatan, keamanan, dan ketahanan terhadap gangguan internet. Dibangun dengan Next.js 14, Supabase, dan Dexie.js (IndexedDB).
 
-First, run the development server:
+## ✨ Fitur Utama
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- 🔐 **Sistem Login PIN**: Akses cepat dan aman dengan role-based access control (Pemilik, Apoteker, Kasir).
+- 🛒 **Sistem Kasir Offline-Ready**: Tetap bisa melayani transaksi meskipun internet mati. Data akan otomatis sinkron saat online.
+- 📦 **Manajemen Inventori**: CRUD obat, kategori, cetak label barcode, dan alert stok rendah.
+- 📊 **Dashboard & Laporan**: Grafik tren penjualan 7 hari, rekap laba rugi, dan data obat terlaris.
+- 📋 **Stok Opname**: Audit stok fisik vs sistem dengan fitur sinkronisasi otomatis.
+- 🖨️ **Struk & Barcode**: Cetak struk via Bluetooth Thermal Printer atau simpan sebagai gambar.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Framework**: Next.js 14 (App Router)
+- **Database Backend**: Supabase (PostgreSQL, Auth, RLS)
+- **Database Lokal**: Dexie.js (IndexedDB)
+- **Styling**: Tailwind CSS
+- **Visualisasi**: Recharts
+- **Offline Mode**: @ducanh2912/next-pwa
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Cara Install & Run Lokal
 
-## Learn More
+1. **Clone repositori**:
+   ```bash
+   git clone https://github.com/steventeen/apotek.git
+   cd apotek
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Konfigurasi Environment Variables**:
+   Buat file `.env.local` dan isi dengan kunci dari Supabase:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Jalankan aplikasi**:
+   ```bash
+   npm run dev
+   ```
+   Buka [http://localhost:3000](http://localhost:3000) di browser.
 
-## Deploy on Vercel
+## 📦 Panduan Deploy ke Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Push ke GitHub**: Pastikan semua perubahan sudah di-push ke branch `main`.
+2. **Koneksikan ke Vercel**: Import proyek dari GitHub ke Dashboard Vercel.
+3. **Set Environment Variables**: Tambahkan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_ANON_KEY` di panel pengaturan Vercel.
+4. **Deploy**: Klik Deploy. Vercel akan menangani build dan deployment secara otomatis.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+Dikembangkan dengan ❤️ untuk **Apotek Ulebi**.

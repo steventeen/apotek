@@ -2,70 +2,46 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Camera, ShoppingCart, Wifi, WifiOff, RefreshCcw } from 'lucide-react'
+import { Search, Camera, ShoppingCart, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useCart } from '@/hooks/useCart'
-import { db, LocalProduct } from '@/lib/db'
+import { db, LocalObat } from '@/lib/offline-db'
 import { BarcodeScanner } from '@/components/kasir/BarcodeScanner'
 import { CartItem } from '@/components/kasir/CartItem'
 import { CheckoutModal } from '@/components/kasir/CheckoutModal'
 import { toast } from 'sonner'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { SyncManager } from '@/lib/sync-manager'
+import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
 
 export default function KasirClient() {
   const supabase = createClient()
+  const isOnline = useOnlineStatus()
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchResults, setSearchResults] = useState<LocalProduct[]>([])
+  const [searchResults, setSearchResults] = useState<LocalObat[]>([])
   const [showScanner, setShowScanner] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [tokoSettings, setTokoSettings] = useState<any>(null)
-  const [isOnline, setIsOnline] = useState(true)
-
-  const [isSyncing, setIsSyncing] = useState(false)
+  
   const { items, addToCart, removeFromCart, updateQuantity, clearCart, total } = useCart()
 
-  // 1. Monitor Online Status & Auto Sync
+  // 1. Fetch Toko Settings & Initial Sync
   useEffect(() => {
-    setIsOnline(navigator.onLine)
-    const handleOnline = () => {
-      setIsOnline(true)
-      syncPendingTransactions()
-    }
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
-  // 2. Fetch & Cache Products
-  useEffect(() => {
-    async function initProducts() {
-      try {
-        const { data, error } = await supabase.from('obat').select('id, kode_plu, nama, harga_jual, stok, satuan').eq('is_active', true)
-        if (data) {
-          await db.products.clear()
-          await db.products.bulkAdd(data)
-        }
-      } catch (e) {
-        console.log('Using local product cache')
-      }
-    }
-    initProducts()
-
-    // 2b. Fetch Toko Settings
-    async function fetchToko() {
+    async function init() {
+      // Fetch Toko Settings
       const { data } = await supabase.from('toko_settings').select('*').limit(1).maybeSingle()
       if (data) setTokoSettings(data)
+      
+      // Auto-sync master data on load if online
+      if (isOnline) {
+        await SyncManager.syncMasterData()
+      }
     }
-    fetchToko()
-  }, [supabase])
+    init()
+  }, [supabase, isOnline])
 
-
-  // 3. Search Logic (Local First)
+  // 2. Search Logic (IndexedDB First)
   useEffect(() => {
     if (!searchTerm.trim()) {
       setSearchResults([])
@@ -73,7 +49,7 @@ export default function KasirClient() {
     }
 
     const performSearch = async () => {
-      const results = await db.products
+      const results = await db.obat
         .filter(p => 
           p.nama.toLowerCase().includes(searchTerm.toLowerCase()) || 
           p.kode_plu.includes(searchTerm)
@@ -87,86 +63,69 @@ export default function KasirClient() {
     return () => clearTimeout(timeoutId)
   }, [searchTerm])
 
-  // 4. Handle Scanner Result
+  // 3. Handle Scanner Result
   const handleScan = async (code: string) => {
-    const product = await db.products.where('kode_plu').equals(code).first()
+    const product = await db.obat.where('kode_plu').equals(code).first()
     if (product) {
       addToCart(product)
       toast.success(`Ditambahkan: ${product.nama}`)
       setShowScanner(false)
     } else {
-      toast.error('Obat tidak ditemukan')
+      toast.error('Obat tidak ditemukan di database lokal')
     }
   }
 
-  // 5. Sync Logic
-  const syncPendingTransactions = async () => {
-    const pending = await db.transactions.where('synced').equals(0).toArray()
-    if (pending.length === 0) return
-
-    setIsSyncing(true)
-    let successCount = 0
-
-    for (const tx of pending) {
-      try {
-        // Simpan ke Supabase
-        const { data, error: txError } = await supabase.from('transaksi').insert({
-          no_invoice: tx.no_invoice,
-          total: tx.total,
-          bayar: tx.bayar,
-          kembali: tx.kembali,
-          metode: tx.metode,
-          created_at: tx.created_at
-        }).select('id').single()
-
-        if (data) {
-          // Simpan detailnya
-          const details = tx.items.map(item => ({
-            transaksi_id: data.id,
-            obat_id: item.id,
-            qty: item.quantity,
-            harga_satuan: item.harga_jual,
-            subtotal: item.harga_jual * item.quantity
-          }))
-          
-          const { error: dtError } = await supabase.from('detail_transaksi').insert(details)
-          if (!dtError) {
-            await db.transactions.update(tx.id!, { synced: 1 })
-            successCount++
-          }
-        }
-      } catch (e) {
-        console.error('Failed to sync transaction', tx.id, e)
-      }
-    }
-
-    if (successCount > 0) toast.success(`${successCount} transaksi disinkronkan ke cloud`)
-    setIsSyncing(false)
-  }
-
-  // 6. Handle Checkout
+  // 4. Handle Checkout
   const handleCheckout = async (bayar: number, kembali: number) => {
     const noInvoice = `INV-${new Date().getTime()}`
-    const transactionData = {
+    
+    const mainTransaction = {
       no_invoice: noInvoice,
-      items: items,
       total: total,
       bayar: bayar,
       kembali: kembali,
       metode: 'tunai',
-      created_at: new Date().toISOString(),
-      synced: 0
+      status: 'selesai',
+      created_at: new Date().toISOString()
     }
 
-    // Selalu simpan ke Dexie dulu (Safety)
-    await db.transactions.add(transactionData)
-    
-    // Jika online, langsung coba sync
-    if (isOnline) {
-      syncPendingTransactions()
-    }
+    const transactionDetails = items.map(item => ({
+      obat_id: item.id,
+      qty: item.quantity,
+      harga_satuan: item.harga_jual,
+      subtotal: item.harga_jual * item.quantity
+    }))
 
-    clearCart()
+    // Save to Offline Queue
+    try {
+      await db.transactions.add({
+        temp_id: `offline-${Date.now()}`,
+        no_invoice: noInvoice,
+        data: { main: mainTransaction, details: transactionDetails },
+        created_at: Date.now(),
+        status: 'pending'
+      })
+
+      // Optimistic Stock Update in local DB
+      for (const item of items) {
+        const local = await db.obat.get(item.id)
+        if (local) {
+          await db.obat.update(item.id, { stok: local.stok - item.quantity })
+        }
+      }
+
+      toast.success(isOnline ? 'Transaksi berhasil diproses' : 'Transaksi disimpan (Mode Offline)')
+      
+      // If online, try to sync immediately
+      if (isOnline) {
+        SyncManager.uploadPendingTransactions()
+      }
+
+      clearCart()
+    } catch (e) {
+      console.error(e)
+      toast.error('Gagal menyimpan transaksi')
+    }
   }
 
   return (
@@ -177,16 +136,10 @@ export default function KasirClient() {
           <div className="bg-blue-600 p-2 rounded-lg">
             <ShoppingCart className="text-white w-6 h-6" />
           </div>
-          <h1 className="text-xl font-bold text-gray-800">Kasir Ulebi</h1>
+          <h1 className="text-xl font-bold text-gray-800 tracking-tight">Kasir Ulebi</h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {isOnline ? 'Online' : 'Offline Mode'}
-          </div>
-          {isSyncing && <RefreshCcw className="w-4 h-4 animate-spin text-blue-600" />}
-        </div>
+        <ConnectivityIndicator />
       </header>
 
       {/* Main Content */}
@@ -203,7 +156,7 @@ export default function KasirClient() {
             />
             <Button 
               size="icon" 
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 bg-blue-50 text-blue-600 hover:bg-blue-100 border-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-12 w-12 bg-blue-50 text-blue-600 hover:bg-blue-100 border-none rounded-xl"
               onClick={() => setShowScanner(true)}
             >
               <Camera className="w-6 h-6" />
@@ -212,34 +165,41 @@ export default function KasirClient() {
             {/* Search Results Dropdown */}
             {searchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border overflow-hidden z-20">
-                {searchResults.map(p => (
-                  <button 
-                    key={p.id}
-                    className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition border-b last:border-none"
-                    onClick={() => {
-                      addToCart(p)
-                      setSearchTerm('')
-                      setSearchResults([])
-                    }}
-                  >
-                    <div className="text-left">
-                      <p className="font-bold text-gray-800">{p.nama}</p>
-                      <p className="text-xs text-gray-500">{p.kode_plu} • Stok: {p.stok} {p.satuan}</p>
-                    </div>
-                    <p className="font-bold text-blue-600">Rp {Number(p.harga_jual).toLocaleString('id-ID')}</p>
-                  </button>
-                ))}
+                {searchResults.map(p => {
+                  const isLow = p.stok <= p.min_stok
+                  return (
+                    <button 
+                      key={p.id}
+                      className="w-full flex items-center justify-between p-4 hover:bg-blue-50 transition border-b last:border-none"
+                      onClick={() => {
+                        addToCart(p)
+                        setSearchTerm('')
+                        setSearchResults([])
+                      }}
+                    >
+                      <div className="text-left min-w-0 pr-4">
+                        <p className="font-bold text-gray-800 truncate">{p.nama}</p>
+                        <p className="text-[10px] text-gray-500 font-mono">{p.kode_plu} • 
+                          <span className={isLow ? 'text-red-500 font-bold ml-1' : 'ml-1'}>
+                            Stok: {p.stok} {p.satuan}
+                          </span>
+                        </p>
+                      </div>
+                      <p className="font-bold text-blue-600 whitespace-nowrap">Rp {Number(p.harga_jual).toLocaleString('id-ID')}</p>
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
 
           {/* Cart List */}
           <div className="space-y-4">
-            <h3 className="font-bold text-gray-500 uppercase tracking-widest text-xs">Keranjang Belanja ({items.length})</h3>
+            <h3 className="font-bold text-gray-400 uppercase tracking-widest text-[10px]">Keranjang Belanja ({items.length})</h3>
             {items.length === 0 ? (
-              <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 h-64 flex flex-col items-center justify-center text-gray-400">
-                <ShoppingCart className="w-12 h-12 mb-2 opacity-20" />
-                <p>Keranjang masih kosong</p>
+              <div className="bg-white rounded-3xl border-2 border-dashed border-gray-100 h-64 flex flex-col items-center justify-center text-gray-300">
+                <ShoppingCart className="w-16 h-16 mb-2 opacity-10" />
+                <p className="font-medium">Keranjang masih kosong</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -258,22 +218,25 @@ export default function KasirClient() {
 
         {/* Sidebar Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-3xl border shadow-lg sticky top-24 overflow-hidden">
-            <div className="p-6 bg-slate-900 text-white">
-              <p className="text-blue-400 font-bold uppercase tracking-tight text-xs mb-1">Total Bayar</p>
+          <div className="bg-white rounded-[32px] border shadow-xl sticky top-24 overflow-hidden border-slate-100">
+            <div className="p-8 bg-slate-900 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <ShoppingCart className="w-24 h-24" />
+              </div>
+              <p className="text-blue-400 font-bold uppercase tracking-tight text-[10px] mb-1">Total Pembayaran</p>
               <div className="text-4xl font-black">Rp {total.toLocaleString('id-ID')}</div>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 italic">Pesanan #{new Date().getTime().toString().slice(-6)}</span>
-                <span className="font-bold text-gray-800">{items.length} Item</span>
+            <div className="p-8 space-y-6">
+              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl">
+                <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">Item</span>
+                <span className="font-black text-slate-800 text-xl">{items.length}</span>
               </div>
               <Button 
-                className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-xl font-black rounded-2xl shadow-lg shadow-blue-100 disabled:opacity-50"
+                className="w-full h-20 bg-blue-600 hover:bg-blue-700 text-2xl font-black rounded-2xl shadow-2xl shadow-blue-100 transition-transform active:scale-95 disabled:opacity-30 disabled:grayscale"
                 disabled={items.length === 0}
                 onClick={() => setShowCheckout(true)}
               >
-                CHECKOUT
+                BAYAR SEKARANG
               </Button>
             </div>
           </div>
@@ -293,12 +256,10 @@ export default function KasirClient() {
           items={items} 
           total={total} 
           toko={tokoSettings || { nama: 'Apotek Ulebi', alamat: '-', no_hp: '-' }}
-          userEmail={user?.email || 'Kasir'}
           onConfirm={handleCheckout} 
           onClose={() => setShowCheckout(false)} 
         />
       )}
-
     </div>
   )
 }

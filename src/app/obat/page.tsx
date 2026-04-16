@@ -2,15 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Filter, 
-  Loader2, 
-  RefreshCcw,
-  LayoutDashboard
-} from 'lucide-react'
+import { LayoutDashboard, RefreshCcw, Loader2, Filter, Search, Plus, Package } from 'lucide-react'
+import { SyncManager } from '@/lib/sync-manager'
+import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { 
@@ -28,6 +23,7 @@ import Link from 'next/link'
 
 export default function ObatPage() {
   const supabase = createClient()
+  const isOnline = useOnlineStatus()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
@@ -92,12 +88,14 @@ export default function ObatPage() {
           .eq('id', editingObat.id)
         if (error) throw error
         toast.success('Obat berhasil diperbarui')
+        if (isOnline) SyncManager.syncMasterData()
       } else {
         const { error } = await supabase
           .from('obat')
           .insert([formData])
         if (error) throw error
         toast.success('Obat berhasil ditambahkan')
+        if (isOnline) SyncManager.syncMasterData()
       }
       fetchData()
     } catch (error: any) {
@@ -111,7 +109,8 @@ export default function ObatPage() {
     try {
       const { error } = await supabase.from('obat').delete().eq('id', id)
       if (error) throw error
-      toast.success('Obat berhasil dihapus')
+      toast.success('Obat berhasil diperbarui')
+      if (isOnline) SyncManager.syncMasterData()
       fetchData()
     } catch (error: any) {
       toast.error(error.message || 'Gagal menghapus data')
@@ -132,7 +131,8 @@ export default function ObatPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <ConnectivityIndicator />
           <Button variant="outline" size="icon" onClick={fetchData} disabled={loading}>
             <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>

@@ -16,12 +16,16 @@ import { Button } from '@/components/ui/button'
 import { SummaryGrid } from '@/components/dashboard/SummaryGrid'
 import { SalesChart } from '@/components/dashboard/SalesChart'
 import { LowStockAlert } from '@/components/dashboard/LowStockAlert'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { SyncManager } from '@/lib/sync-manager'
+import { ConnectivityIndicator } from '@/components/shared/ConnectivityIndicator'
 import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
 export default function DashboardPage() {
   const supabase = createClient()
+  const isOnline = useOnlineStatus()
   const [loading, setLoading] = useState(true)
   const [userRole, setUserRole] = useState('')
   const [stats, setStats] = useState({ totalSales: 0, txCount: 0, estimatedProfit: 0 })
@@ -106,6 +110,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData()
+    
+    // Initial Master Data Sync
+    if (isOnline) {
+      SyncManager.syncMasterData()
+    }
 
     // Real-time Stock Subscription
     const channel = supabase
@@ -157,6 +166,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <ConnectivityIndicator />
           <Button variant="outline" size="icon" className="rounded-xl h-12 w-12" onClick={fetchData}>
             <RefreshCcw className="w-5 h-5 text-gray-600" />
           </Button>
