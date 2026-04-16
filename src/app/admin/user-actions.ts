@@ -7,7 +7,7 @@ export async function addUser(formData: { nama_lengkap: string; role: string; pi
   const supabase = createAdminClient()
 
   // 1. Buat user di auth.users terlebih dahulu
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: `temp_${Date.now()}@ulebi.internal`, // Email sementara, akan di-update setelah dapet ID
     password: `ulebi_${formData.pin}`,
     email_confirm: true,
@@ -47,7 +47,7 @@ export async function updateUserPin(userId: string, newPin: string) {
   const supabase = createAdminClient()
 
   // 1. Update di auth.users (Password)
-  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+  const { error: authError } = await supabase.auth.admin.updateUserById(userId, {
     password: `ulebi_${newPin}`
   })
 
