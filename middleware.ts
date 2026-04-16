@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
 
   if (user && pathname === '/login') return NextResponse.redirect(new URL('/', request.url))
 
-  const protectedRoutes = ['/kasir', '/settings', '/laporan', '/admin']
+  const protectedRoutes = ['/kasir', '/settings', '/laporan', '/admin', '/dashboard', '/obat']
   const isProtectedPath = pathname === '/' || protectedRoutes.some(r => pathname.startsWith(r))
 
   if (!user && isProtectedPath) {
