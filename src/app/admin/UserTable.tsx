@@ -107,17 +107,16 @@ export function UserTable({ users }: { users: any[] }) {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Jabatan / Role</label>
-                <Select onValueChange={(val) => val && setNewRole(val)} defaultValue={newRole}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pemilik">Pemilik</SelectItem>
-                    <SelectItem value="apoteker">Apoteker</SelectItem>
-                    <SelectItem value="kasir_senior">Kasir Senior</SelectItem>
-                    <SelectItem value="kasir_magang">Kasir Magang</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select 
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                >
+                  <option value="pemilik">Pemilik</option>
+                  <option value="apoteker">Apoteker</option>
+                  <option value="kasir_senior">Kasir Senior</option>
+                  <option value="kasir_magang">Kasir Magang</option>
+                </select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">PIN Baru (4 Digit)</label>

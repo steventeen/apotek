@@ -11,7 +11,8 @@ import {
   LayoutDashboard,
   Loader2,
   RefreshCcw,
-  ArrowRight
+  ArrowRight,
+  Users
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SummaryGrid } from '@/components/dashboard/SummaryGrid'
@@ -221,12 +222,20 @@ export default function DashboardPage() {
             </Link>
             
             {userRole === 'pemilik' && (
-              <Link href="/settings">
-                <div className="p-4 bg-orange-50 hover:bg-orange-100 rounded-2xl border border-orange-100 flex flex-col items-center gap-3 transition cursor-pointer group">
-                  <LayoutDashboard className="w-6 h-6 text-orange-600 group-hover:scale-110 transition" />
-                  <span className="text-sm font-bold text-orange-800">Pengaturan</span>
-                </div>
-              </Link>
+              <>
+                <Link href="/settings">
+                  <div className="p-4 bg-orange-50 hover:bg-orange-100 rounded-2xl border border-orange-100 flex flex-col items-center gap-3 transition cursor-pointer group">
+                    <LayoutDashboard className="w-6 h-6 text-orange-600 group-hover:scale-110 transition" />
+                    <span className="text-sm font-bold text-orange-800">Pengaturan</span>
+                  </div>
+                </Link>
+                <Link href="/admin">
+                  <div className="p-4 bg-red-50 hover:bg-red-100 rounded-2xl border border-red-100 flex flex-col items-center gap-3 transition cursor-pointer group">
+                    <Users className="w-6 h-6 text-red-600 group-hover:scale-110 transition" />
+                    <span className="text-sm font-bold text-red-800">Manajemen User</span>
+                  </div>
+                </Link>
+              </>
             )}
           </div>
         </div>
