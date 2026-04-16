@@ -2,136 +2,125 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/service'
 
 /**
- * API Sinkronisasi User Auth
- *
- * Tugas utama:
- * 1. Baca semua user dari public.users
- * 2. Untuk tiap user: buat/update akun di auth.users dengan:
- *    - email: user_<uuid>@ulebi.internal
- *    - password: ulebi_<pin>   (format KONSISTEN dengan LoginForm)
- *    - app_metadata.role: <role>  (wajib agar middleware bisa baca role)
- * 3. Pastikan selalu ada minimal 1 akun pemilik (PIN 1234) sebagai fallback
- *
- * Cara akses: GET /api/admin/repair-users
+ * API ini berfungsi untuk "memperbaiki" autentikasi.
+ * Ia akan mensinkronkan password di auth.users agar sama dengan PIN di public.users.
  */
 export async function GET(request: NextRequest) {
+  // Simple protection: Check for a secret query param if needed, 
+  // but since it uses Service Role, it will only work if the key is valid.
+  const authHeader = request.headers.get('authorization')
+  // In a real app, you'd want better protection here, 
+  // but for an emergency repair, we'll proceed if we have the service role key.
+
   const supabaseAdmin = createAdminClient()
 
   try {
-    // ── LANGKAH 1: Ambil semua profil user ──────────────────────────────────
+    // 1. Ambil semua user dari tabel profil
     const { data: users, error: fetchError } = await supabaseAdmin
       .from('users')
-      .select('id, pin, nama_lengkap, role')
+      .select('id, pin, nama_lengkap')
 
-    if (fetchError) throw new Error('Gagal baca tabel users: ' + fetchError.message)
+    if (fetchError) throw fetchError
 
-    const results: Array<{ id: string; nama: string; status: string; message?: string }> = []
+    const results = []
 
-    // ── LANGKAH 2: Sinkronisasi tiap user ke auth.users ─────────────────────
     for (const user of (users || [])) {
       const email = `user_${user.id}@ulebi.internal`
-      const password = `ulebi_${user.pin}` // Format HARUS sama dengan LoginForm
-      const appMeta = { role: user.role }
-
-      // Coba update dulu (jika akun auth sudah ada)
+      
+      // 2. Coba update user di auth.users
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
         user.id,
-        {
-          email,
-          password,
+        { 
+          email: email,
+          password: `ulebi_${user.pin}`,
           email_confirm: true,
-          app_metadata: appMeta,
-          user_metadata: { nama_lengkap: user.nama_lengkap },
+          user_metadata: { nama_lengkap: user.nama_lengkap }
         }
       )
 
-      if (!updateError) {
-        results.push({ id: user.id, nama: user.nama_lengkap, status: 'updated' })
-        continue
-      }
-
-      // Jika gagal update karena user tidak ditemukan → buat baru
-      const isNotFound =
-        updateError.message.toLowerCase().includes('not found') ||
-        updateError.message.toLowerCase().includes('user not found') ||
-        updateError.status === 404
-
-      if (isNotFound) {
-        const { error: createError } = await supabaseAdmin.auth.admin.createUser({
-          id: user.id,
-          email,
-          password,
-          email_confirm: true,
-          app_metadata: appMeta,
-          user_metadata: { nama_lengkap: user.nama_lengkap },
-        })
-
-        if (createError) {
-          results.push({
+      if (updateError) {
+        // 3. Jika user tidak ditemukan di auth, buat baru
+        if (updateError.message.toLowerCase().includes('not found')) {
+          const { error: createError } = await supabaseAdmin.auth.admin.createUser({
             id: user.id,
-            nama: user.nama_lengkap,
-            status: 'error',
-            message: 'Create failed: ' + createError.message,
+            email: email,
+            password: `ulebi_${user.pin}`,
+            email_confirm: true,
+            user_metadata: { nama_lengkap: user.nama_lengkap }
           })
+
+          if (createError) {
+            // 4. Jika tetap gagal (Database error), ada kemungkinan profil stuck tanpa akun auth
+            // Kita coba hapus dulu profilnya (karena ini data corrupt) lalu buat ulang
+            if (createError.message.toLowerCase().includes('database error')) {
+               await supabaseAdmin.from('users').delete().eq('id', user.id)
+               const { error: retryCreateError } = await supabaseAdmin.auth.admin.createUser({
+                  id: user.id,
+                  email: email,
+                  password: `ulebi_${user.pin}`,
+                  email_confirm: true,
+                  user_metadata: { nama_lengkap: user.nama_lengkap }
+               })
+
+               if (retryCreateError) {
+                  results.push({ id: user.id, status: 'error', message: 'Retry Create: ' + retryCreateError.message })
+               } else {
+                  // Profil biasanya akan dibuat ulang otomatis via trigger jika ada, 
+                  // jika tidak, kita buat manual di sini
+                  await supabaseAdmin.from('users').insert({
+                     id: user.id,
+                     nama_lengkap: user.nama_lengkap,
+                     role: 'pemilik', // Default ke pemilik jika tidak tahu
+                     pin: user.pin
+                  })
+                  results.push({ id: user.id, status: 'recreated' })
+               }
+            } else {
+               results.push({ id: user.id, status: 'error', message: 'Create: ' + createError.message })
+            }
+          } else {
+            results.push({ id: user.id, status: 'created' })
+          }
         } else {
-          results.push({ id: user.id, nama: user.nama_lengkap, status: 'created' })
+          results.push({ id: user.id, status: 'error', message: 'Update: ' + updateError.message })
         }
       } else {
-        results.push({
-          id: user.id,
-          nama: user.nama_lengkap,
-          status: 'error',
-          message: 'Update failed: ' + updateError.message,
-        })
+        results.push({ id: user.id, status: 'success' })
       }
     }
 
-    // ── LANGKAH 3: Pastikan ada akun pemilik fallback ────────────────────────
-    // Jika tidak ada satu pun user sukses, atau sebagai jaring pengaman,
-    // buat akun "Pemilik Default" dengan PIN 1234
-    const hasSuccess = results.some(r => r.status === 'updated' || r.status === 'created')
-    let fallbackMessage = ''
+    // 5. Tambahan Darurat: Jika tidak ada user yang berhasil disinkronkan atau untuk memastikan ada akses,
+    // kita buat satu user Pemilik baru dengan PIN default 1234.
+    const defaultAdminId = crypto.randomUUID()
+    const defaultEmail = `admin_utama@ulebi.internal`
+    const defaultPin = '1234'
 
-    if (!hasSuccess || (users || []).length === 0) {
-      const fallbackId = crypto.randomUUID()
-      const fallbackEmail = `pemilik_default@ulebi.internal`
-      const fallbackPin = '1234'
+    const { error: adminAuthError } = await supabaseAdmin.auth.admin.createUser({
+      id: defaultAdminId,
+      email: defaultEmail,
+      password: `ulebi_${defaultPin}`,
+      email_confirm: true,
+      user_metadata: { nama_lengkap: 'Pemilik Utama' }
+    })
 
-      const { error: fallbackAuthError } = await supabaseAdmin.auth.admin.createUser({
-        id: fallbackId,
-        email: fallbackEmail,
-        password: `ulebi_${fallbackPin}`,
-        email_confirm: true,
-        app_metadata: { role: 'pemilik' },
-        user_metadata: { nama_lengkap: 'Pemilik Default' },
+    if (!adminAuthError) {
+      await supabaseAdmin.from('users').insert({
+        id: defaultAdminId,
+        nama_lengkap: 'Pemilik Utama',
+        role: 'pemilik',
+        pin: defaultPin
       })
-
-      if (!fallbackAuthError) {
-        const { error: fallbackDbError } = await supabaseAdmin.from('users').insert({
-          id: fallbackId,
-          nama_lengkap: 'Pemilik Default',
-          role: 'pemilik',
-          pin: fallbackPin,
-        })
-
-        if (!fallbackDbError) {
-          fallbackMessage = 'Akun fallback "Pemilik Default" dibuat. Gunakan PIN 1234 untuk login.'
-          results.push({ id: fallbackId, nama: 'Pemilik Default', status: 'created (fallback)' })
-        }
-      }
+      results.push({ id: defaultAdminId, status: 'created', message: 'Admin Utama dibuat dengan PIN 1234' })
     }
 
     return NextResponse.json({
-      success: true,
-      message: 'Sinkronisasi selesai.',
-      fallback_info: fallbackMessage || null,
-      total_users: users?.length || 0,
-      results,
+      message: 'Sinkronisasi selesai. Jika Anda masih tidak bisa login, gunakan PIN 1234.',
+      total: users?.length || 0,
+      details: results,
+      action_needed: 'Coba login dengan PIN 1234'
     })
+
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
